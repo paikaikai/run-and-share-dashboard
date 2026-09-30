@@ -41,6 +41,30 @@ st.markdown("""
     }
 }
 
+/* ---------------------------------------------------------
+   เพิ่มส่วนนี้เพื่อซ่อนแถบเมนู ลายน้ำ และปุ่ม Profile ของ Streamlit
+   --------------------------------------------------------- */
+/* ซ่อนแถบ Header ด้านบน (เมนู 3 จุด) */
+[data-testid="stHeader"] {
+    display: none !important;
+}
+
+/* ซ่อน Footer ด้านล่าง (Made with Streamlit) */
+footer {
+    display: none !important;
+}
+
+/* ซ่อนปุ่ม Profile มุมขวาล่าง (Viewer Badge) */
+.viewerBadge_container {
+    display: none !important;
+}
+.viewerBadge_link {
+    display: none !important;
+}
+#MainMenu {
+    visibility: hidden;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
