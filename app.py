@@ -35,7 +35,7 @@ st.markdown('<p class="subtitle-font">สะสมระยะทางไปด
 
 # ---------------------------------------------------------
 # นำลิงก์ที่คัดลอกจาก Google Sheets มาวางในเครื่องหมายคำพูดด้านล่างนี้
-SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBXP261CRZ3NDfd0ZWCCC6XTE9d_JdnKYNAwGw2NQfoKeNBEomZ22RjgNj6suJFewmjAS0XZnH1kh_/pub?output=csv"
+SHEET_CSV_URL = st.secrets["SHEET_URL"]
 # ---------------------------------------------------------
 
 @st.cache_data(ttl=300)
