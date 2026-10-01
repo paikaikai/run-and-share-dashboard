@@ -8,6 +8,7 @@ st.set_page_config(page_title="RUN & SHARE Dashboard", layout="wide")
 # 2. เพิ่ม CSS เพื่อตกแต่งสีสันของตัวอักษรหัวข้อ
 st.markdown("""
 <style>
+/* ตั้งค่าเริ่มต้นสำหรับหน้าจอคอมพิวเตอร์ */
 .title-font {
     font-size: 45px !important;
     color: #E65100; /* สีส้มเข้ม (สีนี้สว่างพอที่จะเห็นชัดทั้งสองโหมด) */
@@ -81,22 +82,6 @@ def load_data(url):
     df = pd.read_csv(url)
     return df
 
-# 3. ฟังก์ชันสำหรับซ่อนชื่อ-นามสกุล (Anonymization)
-def mask_name(name):
-    # ป้องกันกรณีข้อมูลเป็นค่าว่าง ให้แปลงเป็น string ก่อน
-    name_str = str(name).strip()
-    # แยกคำด้วยช่องว่าง
-    parts = name_str.split()
-    
-    if len(parts) >= 2:
-        # หากมีทั้งชื่อและนามสกุล ให้แสดงชื่อเต็ม + อักษรแรกของนามสกุล + ***
-        return f"{parts[0]} {parts[1][0]}***"
-    elif len(name_str) > 2:
-        # หากมีแค่ชื่อคำเดียว ให้แสดงแค่ 2 ตัวอักษรแรก + ***
-        return f"{name_str[:2]}***"
-    
-    return name_str
-
 # ตรวจสอบว่าใส่ลิงก์หรือยัง
 if SHEET_CSV_URL == "วางลิงก์ที่คัดลอกมาตรงนี้":
     st.warning("⚠️ กรุณานำลิงก์จาก Google Sheets มาใส่ในตัวแปร SHEET_CSV_URL ในไฟล์โค้ดก่อนครับ")
@@ -105,8 +90,16 @@ if SHEET_CSV_URL == "วางลิงก์ที่คัดลอกมา�
 # โหลดข้อมูล
 df = load_data(SHEET_CSV_URL)
 
-# สร้างคอลัมน์ใหม่ชื่อ 'ชื่อที่แสดงผล' โดยนำฟังก์ชัน mask_name ไปปรับใช้กับคอลัมน์ 'ชื่อ - สกุล'
-df['ชื่อที่แสดงผล'] = df['ชื่อ - สกุล'].apply(mask_name)
+# ---------------------------------------------------------
+# ดึงรายชื่อนักวิ่งทั้งหมดมาจัดเรียงตามตัวอักษร เพื่อให้แต่ละคนได้หมายเลขเดิมเสมอ
+unique_names = sorted(df['ชื่อ - สกุล'].unique())
+
+# สร้างระบบจับคู่ชื่อจริง กับชื่อสมมติ (เช่น "นักวิ่งคนที่ 1", "นักวิ่งคนที่ 2")
+name_mapping = {name: f"นักวิ่งคนที่ {i+1}" for i, name in enumerate(unique_names)}
+
+# สร้างคอลัมน์ 'ชื่อที่แสดงผล' โดยนำชื่อจริงไปเทียบกับระบบจับคู่ที่เราสร้างไว้
+df['ชื่อที่แสดงผล'] = df['ชื่อ - สกุล'].map(name_mapping)
+# ---------------------------------------------------------
 
 st.subheader("🏆 สรุปผลภาพรวม")
 total_distance = df['รวมระยะวิ่งที่ส่ง'].sum()
@@ -145,7 +138,7 @@ with col_chart1:
 with col_chart2:
     st.subheader("🏢 ระยะทางรวมแบ่งตามหน่วยงาน")
     dept_distance = df.groupby('หน่วยงาน')['รวมระยะวิ่งที่ส่ง'].sum().reset_index()
-    dept_distance = dept_distance.sort_values(by='รวมระยะวิ่งที่ส่ง', ascending=False)
+    dept_distance = dept_distance.sample(frac=1).reset_index(drop=True)
     
     # ใช้ Plotly สร้างกราฟแท่งโดยแยกสีตามหน่วยงาน
     fig2 = px.bar(dept_distance, 
@@ -173,13 +166,13 @@ st.divider() # เพิ่มเส้นคั่นเพื่อควา�
 st.subheader("🏃‍♂️ สรุปยอดระยะทางสะสมของนักวิ่งแต่ละคน (Leaderboard)")
 
 # จัดกลุ่มตามชื่อที่แสดงผลและหน่วยงาน แล้วนำระยะทางมารวมกัน
-summary_df = df.groupby(['ชื่อที่แสดงผล', 'หน่วยงาน'])['รวมระยะวิ่งที่ส่ง'].sum().reset_index()
+summary_df = df.groupby('ชื่อที่แสดงผล')['รวมระยะวิ่งที่ส่ง'].sum().reset_index()
 
 # เปลี่ยนชื่อคอลัมน์ให้อ่านเข้าใจง่ายขึ้น
 summary_df = summary_df.rename(columns={'รวมระยะวิ่งที่ส่ง': 'ระยะทางสะสมรวม (กม.)'})
 
-# เรียงลำดับจากระยะทางมากไปน้อย
-summary_df = summary_df.sort_values(by='ระยะทางสะสมรวม (กม.)', ascending=False).reset_index(drop=True)
+# เพื่อสับเปลี่ยนแถวข้อมูลทั้งหมดแบบสุ่ม (Random)
+summary_df = summary_df.sample(frac=1).reset_index(drop=True)
 
 # เริ่มต้น Index ที่ 1 แทนที่จะเป็น 0 เพื่อให้เหมือนอันดับ
 summary_df.index = summary_df.index + 1 
@@ -218,7 +211,7 @@ dept_summary_df = df.groupby('หน่วยงาน')['รวมระยะ�
 dept_summary_df = dept_summary_df.rename(columns={'รวมระยะวิ่งที่ส่ง': 'ระยะทางสะสมรวม (กม.)'})
 
 # 3. เรียงลำดับจากระยะทางมากไปน้อย
-dept_summary_df = dept_summary_df.sort_values(by='ระยะทางสะสมรวม (กม.)', ascending=False).reset_index(drop=True)
+dept_summary_df = dept_summary_df.sample(frac=1).reset_index(drop=True)
 
 # 4. เริ่มต้น Index ที่ 1 เพื่อทำเป็นอันดับ
 dept_summary_df.index = dept_summary_df.index + 1 
@@ -246,4 +239,4 @@ st.dataframe(
 # ==========================================
 with st.expander("ดูประวัติการส่งผลวิ่งแต่ละครั้งทั้งหมด (ข้อมูลอัปเดตทุก 5 นาที)"):
     # ในตารางข้อมูลดิบ เราจะแสดงเฉพาะ 'ชื่อที่แสดงผล' เพื่อความปลอดภัยของข้อมูล
-    st.dataframe(df[['Timestamp', 'ชื่อที่แสดงผล', 'หน่วยงาน', 'สัปดาห์สำหรับการส่งผลวิ่ง', 'รวมระยะวิ่งที่ส่ง']], use_container_width=True)
+    st.dataframe(df[['Timestamp', 'ชื่อที่แสดงผล', 'สัปดาห์สำหรับการส่งผลวิ่ง', 'รวมระยะวิ่งที่ส่ง']], use_container_width=True)
